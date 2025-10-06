@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Masomo Pledges - Contributor View</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      margin: 0;
+      padding: 20px;
+    }
+    h2, h3 {
+      text-align: center;
+      margin-bottom: 15px;
+    }
+    #loginDiv, #eventsDiv, #contributorsDiv {
+      max-width: 1000px;
+      margin: 0 auto 20px auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    input {
+      padding: 8px;
+      margin: 5px 0;
+      width: 100%;
+      max-width: 250px;
+      box-sizing: border-box;
+    }
+    button {
+      padding: 8px 12px;
+      margin-top: 10px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+      color: #fff;
+    }
+    .btn-login { background: #28a745; }
+    .btn-view { background: #17a2b8; }
+    .btn-back { background: #28a745; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 700px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background: #0077cc;
+      color: #fff;
+      position: sticky;
+      top: 0;
+    }
+    .completed {
+      font-weight: bold;
+      color: green;
+    }
+    .table-wrapper {
+      overflow-x: auto;
+    }
+    #waitMsg {
+      font-weight: bold;
+      color: #0077cc;
+      text-align: center;
+      display: none;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h2>Masomo Pledges - Contributor View</h2>
+
+  <p id="waitMsg">Wait please....</p>
+
+  <!-- LOGIN -->
+  <div id="loginDiv">
+    <h3>Login with your Phone Number</h3>
+    <input type="text" id="phone" placeholder="e.g., 715399449"><br>
+    <button class="btn-login" onclick="login()">Login</button>
+    <p id="loginMsg" style="color:red;"></p>
+  </div>
+
+  <!-- EVENTS LIST -->
+  <div id="eventsDiv" style="display:none;">
+    <h3>Events you contributed to</h3>
+    <div class="table-wrapper">
+      <table id="eventsTable">
+        <thead>
+          <tr>
+            <th>Title</th><th>Date</th><th>Venue</th><th>Action</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- CONTRIBUTORS LIST -->
+  <div id="contributorsDiv" style="display:none;">
+    <h3 id="eventTitleHeading"></h3>
+    <p id="eventDesc"></p>
+    <p id="eventVenueDate"></p>
+    <div class="table-wrapper">
+      <table id="contributorsTable">
+        <thead>
+          <tr>
+            <th>Name</th><th>Phone</th><th>Pledged</th><th>Paid</th><th>Balance</th><th>Status</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <button class="btn-back" onclick="backToEvents()">Back to Events</button>
+  </div>
+
+  <script>
+    const WORKER_URL = "https://wispy-queen-9c9c.ev-dmaundu.workers.dev/"; // replace with your worker URL
+    let userPhone = "";
+    let userEventIds = [];
+
+    function showWait() { document.getElementById("waitMsg").style.display = "block"; }
+    function hideWait() { document.getElementById("waitMsg").style.display = "none"; }
+
+    async function callWorker(payload) {
+      const res = await fetch(WORKER_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      return await res.json();
+    }
+
+    async function login() {
+      let phone = document.getElementById("phone").value.trim();
+      document.getElementById("loginMsg").textContent = "";
+      if (!phone) return alert("Enter phone number");
+
+      if (phone.startsWith('0')) phone = phone.substring(1);
+
+      showWait();
+      try {
+        const res = await callWorker({ action: "loginContributor", phone });
+        hideWait();
+        if (res.success) {
+          userPhone = phone;
+          userEventIds = res.eventIds;
+          document.getElementById("loginDiv").style.display = "none";
+          document.getElementById("eventsDiv").style.display = "block";
+          loadEvents();
+        } else {
+          document.getElementById("loginMsg").textContent = res.message;
+        }
+      } catch (err) {
+        hideWait();
+        alert("Error connecting to server.");
+        console.error(err);
+      }
+    }
+
+    async function loadEvents() {
+      const tbody = document.querySelector("#eventsTable tbody");
+      tbody.innerHTML = "";
+      for (const eventId of userEventIds) {
+        showWait();
+        try {
+          const eventData = await callWorker({ action: "getEventWithContributors", eventId });
+          hideWait();
+          if(eventData){
+            const row = document.createElement("tr");
+            row.innerHTML = `
+              <td>${eventData.event.title}</td>
+              <td>${eventData.event.date}</td>
+              <td>${eventData.event.venue}</td>
+              <td><button class="btn-view" onclick="viewContributors('${eventData.event.eventId}')">View Contributors</button></td>
+            `;
+            tbody.appendChild(row);
+          }
+        } catch(err) {
+          hideWait();
+          console.error(err);
+        }
+      }
+    }
+
+    async function viewContributors(eventId){
+      document.getElementById("eventsDiv").style.display = "none";
+      document.getElementById("contributorsDiv").style.display = "block";
+
+      showWait();
+      try {
+        const eventData = await callWorker({ action: "getEventWithContributors", eventId });
+        hideWait();
+        if(eventData){
+          document.getElementById("eventTitleHeading").innerHTML = `
+            <span style="font-weight:bold; text-transform:uppercase; color:green; display:block; text-align:center; font-size:1.5em;">
+              ${eventData.event.title}
+            </span>
+            <hr style="border:none; border-top:1px solid #ccc; margin:10px 0;">
+          `;
+          document.getElementById("eventDesc").innerHTML = `
+            <span style="font-weight:bold; color:#0077cc; display:block; text-align:center;">
+              ${eventData.event.description}
+            </span>`;
+          document.getElementById("eventVenueDate").innerHTML = `
+            <span style="font-weight:bold; color:#0077cc; display:block; text-align:center;">
+              Venue: ${eventData.event.venue} | Date: ${eventData.event.date}
+            </span>
+            <hr style="border:none; border-top:1px solid #ccc; margin:10px 0;">
+          `;
+
+          const tbody = document.querySelector("#contributorsTable tbody");
+          tbody.innerHTML = "";
+          eventData.contributors.forEach(c => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+              <td>${c.name}</td>
+              <td>${String(c.phone).startsWith('0') ? c.phone : '0' + c.phone}</td>
+              <td>${c.pledgedAmount}</td>
+              <td>${c.paidAmount}</td>
+              <td>${c.balance}</td>
+              <td class="${c.status==='Completed' ? 'completed':''}">${c.status}</td>
+            `;
+            tbody.appendChild(row);
+          });
+        }
+      } catch(err){
+        hideWait();
+        console.error(err);
+        alert("Error fetching event details.");
+      }
+    }
+
+    function backToEvents(){
+      document.getElementById("contributorsDiv").style.display = "none";
+      document.getElementById("eventsDiv").style.display = "block";
+    }
+  </script>
+</body>
+</html>
