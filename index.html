@@ -9,6 +9,15 @@
       font-family: Arial, sans-serif;
       background: #f5f5f5;
       margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+    }
+    main {
+      width: 100%;
+      max-width: 1000px;
       padding: 20px;
     }
     h2, h3 {
@@ -16,12 +25,11 @@
       margin-bottom: 15px;
     }
     #loginDiv, #eventsDiv, #contributorsDiv {
-      max-width: 1000px;
-      margin: 0 auto 20px auto;
       background: #fff;
       padding: 20px;
       border-radius: 8px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      margin-bottom: 20px;
     }
     input {
       padding: 8px;
@@ -29,6 +37,9 @@
       width: 100%;
       max-width: 250px;
       box-sizing: border-box;
+      display: block;
+      margin-left: auto;
+      margin-right: auto;
     }
     button {
       padding: 8px 12px;
@@ -38,10 +49,17 @@
       cursor: pointer;
       font-weight: bold;
       color: #fff;
+      display: block;
+      margin-left: auto;
+      margin-right: auto;
     }
     .btn-login { background: #28a745; }
     .btn-view { background: #17a2b8; }
     .btn-back { background: #28a745; }
+    .table-wrapper {
+      overflow-x: auto;
+      margin-top: 10px;
+    }
     table {
       width: 100%;
       border-collapse: collapse;
@@ -62,9 +80,6 @@
       font-weight: bold;
       color: green;
     }
-    .table-wrapper {
-      overflow-x: auto;
-    }
     #waitMsg {
       font-weight: bold;
       color: #0077cc;
@@ -72,56 +87,70 @@
       display: none;
       margin-bottom: 10px;
     }
+    /* Responsive tweaks */
+    @media (max-width: 600px) {
+      th, td {
+        font-size: 14px;
+        padding: 6px;
+      }
+      input {
+        max-width: 100%;
+      }
+      button {
+        width: 100%;
+      }
+    }
   </style>
 </head>
 <body>
-  <h2>Masomo Pledges - Contributor View</h2>
+  <main>
+    <h2>Masomo Pledges - Contributor View</h2>
+    <p id="waitMsg">Wait please....</p>
 
-  <p id="waitMsg">Wait please....</p>
-
-  <!-- LOGIN -->
-  <div id="loginDiv">
-    <h3>Login with your Phone Number</h3>
-    <input type="text" id="phone" placeholder="e.g., 715399449"><br>
-    <button class="btn-login" onclick="login()">Login</button>
-    <p id="loginMsg" style="color:red;"></p>
-  </div>
-
-  <!-- EVENTS LIST -->
-  <div id="eventsDiv" style="display:none;">
-    <h3>Events you contributed to</h3>
-    <div class="table-wrapper">
-      <table id="eventsTable">
-        <thead>
-          <tr>
-            <th>Title</th><th>Date</th><th>Venue</th><th>Action</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
+    <!-- LOGIN -->
+    <div id="loginDiv">
+      <h3>Login with your Phone Number</h3>
+      <input type="text" id="phone" placeholder="e.g., 715399449"><br>
+      <button class="btn-login" onclick="login()">Login</button>
+      <p id="loginMsg" style="color:red;"></p>
     </div>
-  </div>
 
-  <!-- CONTRIBUTORS LIST -->
-  <div id="contributorsDiv" style="display:none;">
-    <h3 id="eventTitleHeading"></h3>
-    <p id="eventDesc"></p>
-    <p id="eventVenueDate"></p>
-    <div class="table-wrapper">
-      <table id="contributorsTable">
-        <thead>
-          <tr>
-            <th>Name</th><th>Phone</th><th>Pledged</th><th>Paid</th><th>Balance</th><th>Status</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
+    <!-- EVENTS LIST -->
+    <div id="eventsDiv" style="display:none;">
+      <h3>Events you contributed to</h3>
+      <div class="table-wrapper">
+        <table id="eventsTable">
+          <thead>
+            <tr>
+              <th>Title</th><th>Date</th><th>Venue</th><th>Action</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
     </div>
-    <button class="btn-back" onclick="backToEvents()">Back to Events</button>
-  </div>
+
+    <!-- CONTRIBUTORS LIST -->
+    <div id="contributorsDiv" style="display:none;">
+      <h3 id="eventTitleHeading"></h3>
+      <p id="eventDesc"></p>
+      <p id="eventVenueDate"></p>
+      <div class="table-wrapper">
+        <table id="contributorsTable">
+          <thead>
+            <tr>
+              <th>Name</th><th>Phone</th><th>Pledged</th><th>Paid</th><th>Balance</th><th>Status</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <button class="btn-back" onclick="backToEvents()">Back to Events</button>
+    </div>
+  </main>
 
   <script>
-    const WORKER_URL = "https://wispy-queen-9c9c.ev-dmaundu.workers.dev/"; // replace with your worker URL
+    const WORKER_URL = "https://wispy-queen-9c9c.ev-dmaundu.workers.dev/";
     let userPhone = "";
     let userEventIds = [];
 
@@ -141,7 +170,6 @@
       let phone = document.getElementById("phone").value.trim();
       document.getElementById("loginMsg").textContent = "";
       if (!phone) return alert("Enter phone number");
-
       if (phone.startsWith('0')) phone = phone.substring(1);
 
       showWait();
